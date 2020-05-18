@@ -1,0 +1,22 @@
+{
+  "name": "jdzm/pagos",
+  "description": "Pagos de servicios",
+  "type": "project",
+  "require": {
+    "illuminate/database": "^8.0@dev",
+    "vlucas/phpdotenv": "^4.1@dev"
+  },
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "App\\": "application/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Jorge Diaz Montoya",
+      "email": "jdzm@outlook.es"
+    }
+  ],
+  "minimum-stability": "dev"
+}
