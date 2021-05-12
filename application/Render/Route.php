@@ -8,6 +8,7 @@ class Route
 
 	private static $preg_params_init = '/{([^\/]+)}/';
 	private static $preg_params = '(?<\1>[^/]+)';
+	private static $array_routes = [];
 
 	/**
 	*
@@ -21,63 +22,81 @@ class Route
 	* @return uri
 	* Get complete url
 	*/
-	public static function getUri () 
-	{
+	public static function getUri () {
 		$uri = $_SERVER['REQUEST_URI'];
-		if (strpos($uri, '?')) 
-		{
+
+		if (strpos($uri, '?')) {
 			$uri = strstr($uri, '?', true);
 		}
 		
-		if (strpos($uri, 'pagos/public_html/')) 
-		{
-			$uri = str_replace('pagos/public_html/', '', $uri);
+		if (strpos($uri, getenv('APP_URI'))) {
+			$uri = str_replace(getenv('APP_URI'), '', $uri);
 		}
 		
 		return $uri;
 	}
-
 
 	/**
 	*
 	* @return params names
 	* Get params
 	*/
-	private static function pregMathAll ($route) 
-	{
+	private static function pregMathAll ($route) {
 		preg_match_all(static::$preg_params_init, $route, $names_params);
 		return $names_params;
 	}
 
-	public static function add ($route, $controller)
-	{
+	/**
+	 * 
+	 * @return route adding
+	 */
+	public static function add ($route, $controller, $method = null) {
 		$urlRule = preg_replace(static::$preg_params_init, static::$preg_params, $route);
 		$urlRule = str_replace('/', '\/', $urlRule);
+		array_push(self::$array_routes, $route);
 
-		if (preg_match('/^' . $urlRule . '\/*$/s', self::getUri(), $matches)) 
-		{
+		if (preg_match('/^' . $urlRule . '\/*$/s', self::getUri(), $matches)) {
 			$args = array_intersect_key($matches, array_flip(static::pregMathAll($route)[1]));
 
 			$closure = $controller;
 
-			if (is_string($controller))
+			if (is_string($controller) && isset($method) && !empty($method)) 
 			{
-				if (strpos($controller, '@')) 
-				{
-					$controller = str_replace('@', '::', $controller);
-				}
-				
-				$classController = explode("::", $controller);
-				$closure = 'App\\Controllers\\'.$classController[0];
-				$closure = new $closure;
-			
-				return call_user_func_array(array($closure, $classController[1]), $args);
+				$closure = new $controller;
+				return call_user_func_array(array($closure, $method), $args);
 			}
-			else
+			else 
 			{
 				return call_user_func_array($closure, $args);
 			}
 		}
 	}
 
+	/**
+	 * 
+	 * @return all routes
+	 */
+	public static function getRoutes () {
+		return self::$array_routes;
+	}
+
+	/**
+	 * 
+	 * Verify route if exist
+	 */
+	public static function verifyRouteExist () {
+		$uri = self::getUri();
+		$existUri = null;
+
+		foreach(self::getRoutes() as $route) {
+			$urlRule = preg_replace(static::$preg_params_init, static::$preg_params, $route);
+			$urlRule = str_replace('/', '\/', $urlRule);
+
+			if (preg_match('/^' . $urlRule . '\/*$/s', $uri, $matches)) {
+				$existUri = $uri;
+			}
+		}
+
+		if ($uri != $existUri) throw new RouteNotFoundException('Not found.', 404);
+	}
 }
